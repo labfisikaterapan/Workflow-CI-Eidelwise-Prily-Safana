@@ -30,29 +30,32 @@ jobs:
         
     # Step 4: Run MLflow Project (Training)
     - name: Run mlflow project
+      id: train
       run: |
         cd MLProject
         python modelling.py --n_estimators 100 --max_depth 10 --min_samples_split 2
         echo "Training completed!"
-        
-    # Step 5: Get latest MLflow run_id
-    - name: Get latest MLflow run_id
-      id: get_run_id
-      run: |
-        cd MLProject
-        RUN_ID=$(ls -td mlruns/0/*/ 2>/dev/null | head -1 | xargs -I {} basename {})
+        # Get the run_id from mlruns
+        RUN_ID=$(ls -td mlruns/0/*/ 2>/dev/null | grep -v "meta.yaml" | head -1 | xargs -I {} basename {})
         echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
-        echo "Model path: mlruns/0/$RUN_ID/artifacts/model"
-        ls -la mlruns/0/$RUN_ID/artifacts/model/ || echo "Checking model..."
+        echo "Run ID: $RUN_ID"
+        # Show directory structure
+        echo "=== MLruns structure ==="
+        find mlruns -type d -name "artifacts" 2>/dev/null
+        find mlruns -type d -name "model" 2>/dev/null
         
-    # Step 6: Build Docker Image using mlflow models build-docker
+    # Step 5: Build Docker Image using mlflow models build-docker
     - name: Build Docker Model (mlflow models build-docker)
       run: |
         cd MLProject
-        RUN_ID=${{ steps.get_run_id.outputs.run_id }}
-        MODEL_URI="mlruns/0/$RUN_ID/artifacts/model"
+        RUN_ID=${{ steps.train.outputs.run_id }}
+        # Use runs:/ URI format which MLflow understands
+        MODEL_URI="runs:/$RUN_ID/model"
         echo "Building Docker image from: $MODEL_URI"
-        mlflow models build-docker -m "$MODEL_URI" -n "diabetes-classifier" --enable-mlserver
+        echo "Working directory: $(pwd)"
+        echo "MLFLOW_TRACKING_URI: file://$(pwd)/mlruns"
+        export MLFLOW_TRACKING_URI="file://$(pwd)/mlruns"
+        mlflow models build-docker -m "$MODEL_URI" -n "diabetes-classifier"
         docker images
         echo "Docker image built successfully using mlflow models build-docker!"
         
