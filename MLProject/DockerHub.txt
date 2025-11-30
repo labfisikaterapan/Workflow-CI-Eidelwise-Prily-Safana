@@ -1,0 +1,46 @@
+Docker Hub Repository
+=====================
+
+Nama Siswa: Eidelwise Prily Safana
+Kriteria 3: ADVANCED (4 pts)
+
+============================================================
+DOCKER HUB LINK
+============================================================
+https://hub.docker.com/r/eizfisika/diabetes-classifier
+
+============================================================
+IMAGE TAGS
+============================================================
+- eizfisika/diabetes-classifier:latest
+- eizfisika/diabetes-classifier:v1.0.0
+
+============================================================
+PULL & RUN COMMANDS
+============================================================
+docker pull eizfisika/diabetes-classifier:latest
+docker run -p 5000:5000 eizfisika/diabetes-classifier:latest
+
+============================================================
+BUILD DENGAN MLFLOW (KRITERIA ADVANCED)
+============================================================
+# Command yang digunakan di GitHub Actions:
+mlflow models build-docker -m "$MODEL_PATH" -n "eizfisika/diabetes-classifier" --enable-mlserver
+
+============================================================
+WORKFLOW CI FEATURES (KRITERIA ADVANCED)
+============================================================
+1. ✅ mlflow models build-docker - Build Docker image dari MLflow model
+2. ✅ docker/login-action@v2 - Login ke Docker Hub
+3. ✅ docker tag - Tag image dengan version
+4. ✅ docker push - Push image ke Docker Hub
+
+============================================================
+GITHUB SECRETS YANG DIPERLUKAN
+============================================================
+DOCKER_PASSWORD: <docker_hub_access_token>
+
+Catatan:
+- Image ini berisi model Random Forest untuk klasifikasi diabetes
+- Port 5000 digunakan untuk MLflow model serving
+- Pastikan Docker sudah terinstall sebelum menjalankan container

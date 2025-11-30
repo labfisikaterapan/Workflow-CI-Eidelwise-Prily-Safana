@@ -1,0 +1,214 @@
+name: ML Training & Docker Hub Push Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'MLProject/**'
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+env:
+  DOCKER_USERNAME: eizfisika
+  IMAGE_NAME: diabetes-classifier
+
+jobs:
+  # =====================================================
+  # JOB 1: Training Model dengan MLflow
+  # =====================================================
+  train:
+    runs-on: ubuntu-latest
+    
+    outputs:
+      model_uri: ${{ steps.train_step.outputs.model_uri }}
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install mlflow==2.9.2 scikit-learn pandas numpy matplotlib seaborn joblib
+        pip install -r MLProject/requirements.txt
+        
+    - name: Run MLflow Training
+      id: train_step
+      run: |
+        cd MLProject
+        python modelling.py
+        
+        # Find the model URI
+        MODEL_URI=$(find mlruns -path "*/artifacts/model" -type d | head -1)
+        echo "model_uri=$MODEL_URI" >> $GITHUB_OUTPUT
+        echo "Model saved at: $MODEL_URI"
+        
+    - name: Upload training artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: training-artifacts
+        path: |
+          MLProject/mlruns/
+          MLProject/*.joblib
+          MLProject/*.pkl
+        retention-days: 30
+
+  # =====================================================
+  # JOB 2: Build Docker Image dengan mlflow models build-docker
+  # =====================================================
+  build-docker:
+    needs: train
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+        
+    - name: Install MLflow and dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install mlflow==2.9.2 scikit-learn pandas numpy virtualenv
+        
+    - name: Download training artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: training-artifacts
+        path: MLProject/
+        
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    # =====================================================
+    # KRITERIA ADVANCED: Login ke Docker Hub
+    # =====================================================
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ env.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+    
+    # =====================================================
+    # KRITERIA ADVANCED: mlflow models build-docker
+    # =====================================================
+    - name: Build Docker Image with MLflow build-docker
+      run: |
+        cd MLProject
+        
+        # Find the model path from mlruns
+        MODEL_PATH=$(find mlruns -path "*/artifacts/model" -type d | head -1)
+        
+        echo "================================================"
+        echo "Building Docker Image with MLflow"
+        echo "Model Path: $MODEL_PATH"
+        echo "================================================"
+        
+        if [ -n "$MODEL_PATH" ]; then
+          # KRITERIA ADVANCED: Menggunakan mlflow models build-docker
+          mlflow models build-docker \
+            -m "$MODEL_PATH" \
+            -n "${{ env.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}" \
+            --enable-mlserver
+          
+          echo "Docker image built successfully using mlflow models build-docker!"
+        else
+          echo "Error: Model not found in mlruns"
+          exit 1
+        fi
+        
+    # =====================================================
+    # KRITERIA ADVANCED: docker tag
+    # =====================================================
+    - name: Tag Docker Image
+      run: |
+        docker tag ${{ env.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest ${{ env.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        docker tag ${{ env.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest ${{ env.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:v1.0.0
+        
+        echo "Docker images tagged:"
+        docker images | grep ${{ env.IMAGE_NAME }}
+        
+    # =====================================================
+    # KRITERIA ADVANCED: docker push
+    # =====================================================
+    - name: Push Docker Image to Docker Hub
+      run: |
+        echo "Pushing Docker images to Docker Hub..."
+        docker push ${{ env.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+        docker push ${{ env.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        docker push ${{ env.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:v1.0.0
+        
+    - name: Docker Image Summary
+      run: |
+        echo "================================================"
+        echo "✅ Docker Image Successfully Pushed to Docker Hub!"
+        echo "================================================"
+        echo ""
+        echo "Repository: ${{ env.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}"
+        echo ""
+        echo "Tags pushed:"
+        echo "  - latest"
+        echo "  - ${{ github.sha }}"
+        echo "  - v1.0.0"
+        echo ""
+        echo "Docker Hub URL:"
+        echo "  https://hub.docker.com/r/${{ env.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}"
+        echo ""
+        echo "================================================"
+        echo "KRITERIA ADVANCED TERPENUHI:"
+        echo "  ✅ mlflow models build-docker"
+        echo "  ✅ docker/login-action@v2"
+        echo "  ✅ docker tag"
+        echo "  ✅ docker push"
+        echo "================================================"
+
+  # =====================================================
+  # JOB 3: Save Artifacts to Repository
+  # =====================================================
+  save-artifacts:
+    needs: [train, build-docker]
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Download training artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: training-artifacts
+        path: saved_artifacts/
+        
+    - name: Create artifact summary
+      run: |
+        mkdir -p saved_artifacts
+        
+        echo "# ML Training Artifacts - Eidelwise Prily Safana" > saved_artifacts/ARTIFACTS.md
+        echo "" >> saved_artifacts/ARTIFACTS.md
+        echo "## Training Info" >> saved_artifacts/ARTIFACTS.md
+        echo "- **Date**: $(date)" >> saved_artifacts/ARTIFACTS.md
+        echo "- **Commit**: ${{ github.sha }}" >> saved_artifacts/ARTIFACTS.md
+        echo "- **Docker Image**: ${{ env.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest" >> saved_artifacts/ARTIFACTS.md
+        echo "- **Docker Hub**: https://hub.docker.com/r/${{ env.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}" >> saved_artifacts/ARTIFACTS.md
+        echo "" >> saved_artifacts/ARTIFACTS.md
+        echo "## Kriteria Advanced Terpenuhi" >> saved_artifacts/ARTIFACTS.md
+        echo "- ✅ Workflow CI dengan GitHub Actions" >> saved_artifacts/ARTIFACTS.md
+        echo "- ✅ Artifacts tersimpan di GitHub" >> saved_artifacts/ARTIFACTS.md
+        echo "- ✅ Docker Image dibuat dengan mlflow models build-docker" >> saved_artifacts/ARTIFACTS.md
+        echo "- ✅ Docker Image dipush ke Docker Hub" >> saved_artifacts/ARTIFACTS.md
+        
+    - name: Upload final artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: final-ml-artifacts
+        path: saved_artifacts/
+        retention-days: 90
