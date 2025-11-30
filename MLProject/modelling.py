@@ -1,7 +1,8 @@
 """
 MLflow Project - Modelling
 Nama Siswa: Eidelwise Prily Safana
-Kriteria 3: ADVANCE - Workflow CI dengan Docker
+Kriteria 3: ADVANCE - Workflow CI dengan Docker Hub
+Last Updated: 2025-12-01
 
 File ini melatih model dan dapat dijalankan sebagai MLflow Project.
 """
