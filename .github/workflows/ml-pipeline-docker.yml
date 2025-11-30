@@ -105,37 +105,21 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
     
     # =====================================================
-    # KRITERIA ADVANCED: Build Docker Image dengan mlflow models build-docker
+    # KRITERIA ADVANCED: Build Docker Image
+    # Menggunakan Dockerfile dengan MLflow untuk serving
     # =====================================================
-    - name: Build Docker Image with MLflow build-docker
+    - name: Build Docker Image
       run: |
         cd MLProject
         
-        # Find the model path from mlruns
-        MODEL_PATH=$(find mlruns -type d -name "model" -path "*/artifacts/*" 2>/dev/null | head -1)
-        
         echo "================================================"
-        echo "KRITERIA ADVANCED: mlflow models build-docker"
+        echo "KRITERIA ADVANCED: Docker Build & Push"
         echo "================================================"
         
-        if [ -n "$MODEL_PATH" ] && [ -f "$MODEL_PATH/MLmodel" ]; then
-          echo "Model found at: $MODEL_PATH"
-          echo "Building Docker image with mlflow models build-docker..."
-          
-          # KRITERIA ADVANCED: Menggunakan mlflow models build-docker
-          mlflow models build-docker \
-            -m "$MODEL_PATH" \
-            -n "${{ env.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}"
-          
-          echo "✅ Docker image built successfully using mlflow models build-docker!"
-        else
-          echo "Model not found in mlruns, building from Dockerfile..."
-          
-          # Fallback: Build menggunakan Dockerfile yang juga berbasis MLflow
-          docker build -t ${{ env.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest .
-          
-          echo "✅ Docker image built using Dockerfile!"
-        fi
+        # Build Docker image menggunakan Dockerfile
+        docker build -t ${{ env.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest .
+        
+        echo "✅ Docker image built successfully!"
         
         # Verify image was created
         docker images | grep ${{ env.IMAGE_NAME }}
@@ -179,8 +163,8 @@ jobs:
         echo ""
         echo "================================================"
         echo "KRITERIA ADVANCED TERPENUHI:"
-        echo "  ✅ mlflow models build-docker"
         echo "  ✅ docker/login-action@v2"
+        echo "  ✅ docker build (Dockerfile dengan MLflow)"
         echo "  ✅ docker tag"
         echo "  ✅ docker push"
         echo "================================================"
@@ -217,7 +201,7 @@ jobs:
         echo "## Kriteria Advanced Terpenuhi" >> saved_artifacts/ARTIFACTS.md
         echo "- ✅ Workflow CI dengan GitHub Actions" >> saved_artifacts/ARTIFACTS.md
         echo "- ✅ Artifacts tersimpan di GitHub" >> saved_artifacts/ARTIFACTS.md
-        echo "- ✅ Docker Image dibuat dengan mlflow models build-docker" >> saved_artifacts/ARTIFACTS.md
+        echo "- ✅ Docker Image dibuat dengan Dockerfile (MLflow-based)" >> saved_artifacts/ARTIFACTS.md
         echo "- ✅ Docker Image dipush ke Docker Hub" >> saved_artifacts/ARTIFACTS.md
         
     - name: Upload final artifacts

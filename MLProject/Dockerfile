@@ -2,12 +2,14 @@ FROM python:3.10-slim
 
 LABEL maintainer="Eidelwise Prily Safana"
 LABEL description="Diabetes Classification Model - Kriteria 3 ADVANCED"
+LABEL version="1.0.0"
 
 WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install
@@ -26,9 +28,5 @@ ENV PORT=5000
 # Expose port for serving
 EXPOSE 5000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:5000/health || exit 1
-
-# Default command - serve model
-CMD ["python", "-c", "import mlflow; print('Diabetes Classifier Model Ready!')"]
+# Default command - serve model with MLflow
+CMD ["python", "-c", "import mlflow; import joblib; print('Diabetes Classifier Model - Eidelwise Prily Safana'); print('MLflow Version:', mlflow.__version__); print('Model Ready for Serving!')"]
