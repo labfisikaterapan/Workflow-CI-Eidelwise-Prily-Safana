@@ -86,9 +86,13 @@ jobs:
         
     - name: 🏗️ Build Docker Image with MLflow
       if: github.event_name == 'push'
+      working-directory: ./MLProject
       run: |
-        cd MLProject
         echo "=== Building Docker Image ==="
+        
+        # Get the actual run_id from the latest run
+        RUN_ID=$(find mlruns/0 -maxdepth 1 -type d ! -name "0" ! -name "mlruns" | sort -r | head -1 | xargs basename)
+        echo "Using Run ID: $RUN_ID"
         
         # Create Dockerfile for model serving
         cat > Dockerfile << 'EOF'
@@ -102,6 +106,7 @@ jobs:
         # Copy model and artifacts
         COPY mlruns/ /app/mlruns/
         COPY *.joblib /app/ 2>/dev/null || true
+        COPY diabetes_preprocessing.csv /app/
         
         # Expose port
         EXPOSE 5002
@@ -109,10 +114,11 @@ jobs:
         # Set environment
         ENV MLFLOW_TRACKING_URI=file:///app/mlruns
         
-        # Start MLflow server
+        # Start MLflow server with the model
         CMD ["mlflow", "models", "serve", "-m", "mlruns/0", "--port", "5002", "--host", "0.0.0.0", "--no-conda"]
         EOF
         
+        # Build Docker image
         docker build -t eidelwiseprily/diabetes-classifier:latest .
         echo "✅ Docker image built successfully"
       continue-on-error: true
