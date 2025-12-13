@@ -1,1 +1,1 @@
-Docker: eizfisika/diabetes-classifier 12/13/2025 15:11:08
+Secrets: DOCKER_USERNAME, DOCKER_PASSWORD 12/13/2025 15:19:05
