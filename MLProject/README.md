@@ -1,6 +1,6 @@
 # MLflow Project - Diabetes Classifier
 **Nama:** Eidelwise Prily Safana  
-**Updated:** 13 Desember 2025
+**Updated:** 13 Desember 2025 - v2
 
 ## 📋 Deskripsi
 Folder ini berisi MLflow Project untuk automated training model Diabetes Classifier.
