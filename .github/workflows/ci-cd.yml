@@ -45,14 +45,42 @@ jobs:
           -P random_state=42
         echo "Training completed!"
         
+    - name: Find and Prepare Artifacts
+      run: |
+        echo "=== Finding mlruns location ==="
+        echo "Current directory: $(pwd)"
+        echo "Listing root:"
+        ls -la
+        echo "Listing MLProject:"
+        ls -la MLProject/
+        echo "Finding all mlruns directories:"
+        find . -type d -name "mlruns" 2>/dev/null || echo "No mlruns found"
+        echo "Finding all .joblib files:"
+        find . -name "*.joblib" 2>/dev/null || echo "No joblib found"
+        echo "Finding all .png files:"
+        find . -name "*.png" 2>/dev/null || echo "No png found"
+        # Copy mlruns from MLProject to root if exists there
+        if [ -d "MLProject/mlruns" ]; then
+          echo "Found mlruns in MLProject/, copying to root"
+          cp -r MLProject/mlruns ./mlruns
+        fi
+        # Create artifacts directory for collection
+        mkdir -p artifacts
+        find . -name "*.joblib" -exec cp {} artifacts/ \; 2>/dev/null || true
+        find . -name "*.png" -exec cp {} artifacts/ \; 2>/dev/null || true
+        if [ -d "mlruns" ]; then cp -r mlruns artifacts/; fi
+        if [ -d "MLProject/mlruns" ]; then cp -r MLProject/mlruns artifacts/; fi
+        echo "Artifacts collected:"
+        ls -la artifacts/ || echo "No artifacts directory"
+        
     - name: Save Model Artifacts to GitHub
       uses: actions/upload-artifact@v4
       with:
         name: diabetes-model-artifacts
         path: |
+          artifacts/
           mlruns/
-          MLProject/*.joblib
-          MLProject/*.png
+          MLProject/mlruns/
         retention-days: 30
         if-no-files-found: warn
         

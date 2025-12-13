@@ -1,1 +1,1 @@
-fix artifact paths 12/13/2025 15:36:10
+debug artifacts 12/13/2025 15:41:00
