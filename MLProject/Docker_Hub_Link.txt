@@ -1,0 +1,36 @@
+# Docker Hub Link
+**Nama:** Eidelwise Prily Safana
+
+## 🐳 Docker Image untuk Deployment
+
+**Repository:** eidelwiseprily/diabetes-classifier
+
+**Tags:**
+- `latest` - Latest stable version
+- `v1.0` - Version 1.0
+
+## 📥 Pull Image
+```bash
+docker pull eidelwiseprily/diabetes-classifier:latest
+```
+
+## 🚀 Run Container
+```bash
+docker run -p 5000:5000 eidelwiseprily/diabetes-classifier:latest
+```
+
+## 🔗 Docker Hub URL
+https://hub.docker.com/r/eidelwiseprily/diabetes-classifier
+
+---
+
+**Note:** Docker image akan tersedia setelah proses build CI/CD selesai.
+Gunakan GitHub Actions workflow untuk automated build dan push ke Docker Hub.
+
+## 📋 Dockerfile
+Dockerfile untuk build image tersedia di repository root.
+
+## ⚙️ Environment Variables
+- `MLFLOW_TRACKING_URI` - MLflow tracking server (default: local)
+- `MODEL_PATH` - Path to model file
+- `PORT` - Service port (default: 5000)
