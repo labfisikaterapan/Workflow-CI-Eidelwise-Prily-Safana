@@ -78,13 +78,21 @@ def train_model_with_autolog(n_estimators=100, max_depth=10, min_samples_split=2
         'diabetes_preprocessing.csv'
     )
     
-    # Set experiment
-    mlflow.set_experiment("Diabetes_Classification_Eidelwise")
-    
-    # Enable autolog
+    # Enable autolog (jangan set experiment jika sudah ada dari mlflow run)
     mlflow.sklearn.autolog()
     
-    with mlflow.start_run(run_name="RandomForest_Autolog"):
+    # Gunakan run yang sudah aktif dari mlflow run, atau buat baru jika standalone
+    active_run = mlflow.active_run()
+    if active_run is None:
+        # Standalone mode - buat run baru
+        mlflow.set_experiment("Diabetes_Classification_Eidelwise")
+        run_context = mlflow.start_run(run_name="RandomForest_Autolog")
+    else:
+        # Dipanggil dari mlflow run - gunakan run yang sudah ada
+        from contextlib import nullcontext
+        run_context = nullcontext()
+    
+    with run_context:
         print("\n[INFO] Melatih model RandomForestClassifier...")
         
         # Inisialisasi model dengan parameters
@@ -124,7 +132,8 @@ def train_model_with_autolog(n_estimators=100, max_depth=10, min_samples_split=2
         print(confusion_matrix(y_test, y_pred))
         
         print("\n[INFO] Model dan metrik dicatat di MLflow Tracking UI")
-        print(f"[INFO] Run ID: {mlflow.active_run().info.run_id}")
+        if mlflow.active_run():
+            print(f"[INFO] Run ID: {mlflow.active_run().info.run_id}")
         
     return model
 
