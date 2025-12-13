@@ -62,7 +62,7 @@ jobs:
         echo "🔍 Run ID: ${{ steps.train.outputs.run_id }}"
         
     - name: 💾 Save Model Artifacts to GitHub
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: diabetes-model-artifacts
         path: |
