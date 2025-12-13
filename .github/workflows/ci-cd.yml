@@ -50,7 +50,7 @@ jobs:
       with:
         name: diabetes-model-artifacts
         path: |
-          MLProject/mlruns/
+          mlruns/
           MLProject/*.joblib
           MLProject/*.png
         retention-days: 30
@@ -69,11 +69,14 @@ jobs:
         
     - name: Build Docker Image using mlflow build-docker
       if: github.event_name == 'push'
-      working-directory: ./MLProject
       run: |
         echo "=== Building Docker Image using mlflow build-docker ==="
+        echo "Listing mlruns directory:"
+        ls -la mlruns/ || echo "mlruns not found in root"
         EXPERIMENT_ID=$(ls mlruns/ | grep -E '^[0-9]+$' | head -1)
+        echo "Experiment ID: $EXPERIMENT_ID"
         RUN_ID=$(ls -t mlruns/$EXPERIMENT_ID/ | grep -v 'meta.yaml' | head -1)
+        echo "Run ID: $RUN_ID"
         MODEL_URI="mlruns/$EXPERIMENT_ID/$RUN_ID/artifacts/model"
         echo "Model URI: $MODEL_URI"
         if [ -d "$MODEL_URI" ]; then
@@ -86,7 +89,7 @@ jobs:
           echo 'WORKDIR /app' >> Dockerfile
           echo 'RUN pip install --no-cache-dir mlflow scikit-learn pandas numpy joblib' >> Dockerfile
           echo 'COPY mlruns/ /app/mlruns/' >> Dockerfile
-          echo 'COPY diabetes_preprocessing.csv /app/' >> Dockerfile
+          echo 'COPY MLProject/diabetes_preprocessing.csv /app/' >> Dockerfile
           echo 'EXPOSE 5002' >> Dockerfile
           echo 'CMD ["python", "-c", "print(\"Model ready\")"]' >> Dockerfile
           docker build -t eizfisika/diabetes-classifier:latest .
