@@ -78,19 +78,24 @@ def train_model_with_autolog(n_estimators=100, max_depth=10, min_samples_split=2
         'diabetes_preprocessing.csv'
     )
     
-    # Enable autolog (jangan set experiment jika sudah ada dari mlflow run)
+    # Enable autolog
     mlflow.sklearn.autolog()
     
-    # Gunakan run yang sudah aktif dari mlflow run, atau buat baru jika standalone
-    active_run = mlflow.active_run()
-    if active_run is None:
-        # Standalone mode - buat run baru
-        mlflow.set_experiment("Diabetes_Classification_Eidelwise")
-        run_context = mlflow.start_run(run_name="RandomForest_Autolog")
-    else:
-        # Dipanggil dari mlflow run - gunakan run yang sudah ada
+    # Check if running from mlflow run (MLFLOW_RUN_ID will be set)
+    import os
+    is_mlflow_run = 'MLFLOW_RUN_ID' in os.environ
+    
+    if is_mlflow_run:
+        # Running from mlflow run - don't create new run, use existing context
         from contextlib import nullcontext
         run_context = nullcontext()
+        print("[INFO] Running from mlflow run command")
+    else:
+        # Standalone mode - create our own experiment and run
+        mlflow.set_tracking_uri("mlruns")
+        mlflow.set_experiment("Diabetes_Classification_Eidelwise")
+        run_context = mlflow.start_run(run_name="RandomForest_Autolog")
+        print("[INFO] Running in standalone mode")
     
     with run_context:
         print("\n[INFO] Melatih model RandomForestClassifier...")
@@ -154,8 +159,8 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     
-    # Set tracking URI ke lokal
-    mlflow.set_tracking_uri("mlruns")
+    # NOTE: Don't set tracking URI here - let train_model_with_autolog handle it
+    # based on whether we're running from mlflow run or standalone
     
     # Jalankan training dengan parameters
     model = train_model_with_autolog(
