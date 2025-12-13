@@ -85,43 +85,52 @@ jobs:
         password: ${{ secrets.DOCKERHUB_TOKEN }}
       continue-on-error: true
         
-    - name: 🏗️ Build Docker Image with MLflow
+    - name: 🏗️ Build Docker Image using mlflow build-docker
       if: github.event_name == 'push'
       working-directory: ./MLProject
       run: |
-        echo "=== Building Docker Image ==="
+        echo "=== Building Docker Image using mlflow build-docker ==="
         
-        # Get the actual run_id from the latest run
-        RUN_ID=$(find mlruns/0 -maxdepth 1 -type d ! -name "0" ! -name "mlruns" | sort -r | head -1 | xargs basename)
-        echo "Using Run ID: $RUN_ID"
+        # Get experiment ID (default is 0 for first experiment)
+        EXPERIMENT_ID=$(ls mlruns/ | grep -E '^[0-9]+$' | head -1)
+        echo "Experiment ID: $EXPERIMENT_ID"
         
-        # Create Dockerfile for model serving
-        cat > Dockerfile << 'EOF'
-        FROM python:3.11-slim
+        # Get the latest run_id
+        RUN_ID=$(ls -t mlruns/$EXPERIMENT_ID/ | grep -v 'meta.yaml' | head -1)
+        echo "Run ID: $RUN_ID"
         
-        WORKDIR /app
+        # Build model path
+        MODEL_URI="mlruns/$EXPERIMENT_ID/$RUN_ID/artifacts/model"
+        echo "Model URI: $MODEL_URI"
         
-        # Install dependencies
-        RUN pip install --no-cache-dir mlflow scikit-learn pandas numpy joblib
-        
-        # Copy model and artifacts
-        COPY mlruns/ /app/mlruns/
-        COPY *.joblib /app/ 2>/dev/null || true
-        COPY diabetes_preprocessing.csv /app/
-        
-        # Expose port
-        EXPOSE 5002
-        
-        # Set environment
-        ENV MLFLOW_TRACKING_URI=file:///app/mlruns
-        
-        # Start MLflow server with the model
-        CMD ["mlflow", "models", "serve", "-m", "mlruns/0", "--port", "5002", "--host", "0.0.0.0", "--no-conda"]
-        EOF
-        
-        # Build Docker image
-        docker build -t eidelwiseprily/diabetes-classifier:latest .
-        echo "✅ Docker image built successfully"
+        # Check if model exists
+        if [ -d "$MODEL_URI" ]; then
+          echo "✅ Model found at $MODEL_URI"
+          
+          # Use mlflow models build-docker (KRITERIA ADVANCED)
+          echo "🐳 Building Docker image using mlflow models build-docker..."
+          mlflow models build-docker \
+            -m "$MODEL_URI" \
+            -n "eidelwiseprily/diabetes-classifier" \
+            --enable-mlserver
+          
+          echo "✅ Docker image built successfully using mlflow build-docker!"
+        else
+          echo "⚠️ Model not found at $MODEL_URI, using fallback Dockerfile..."
+          
+          # Fallback: Create Dockerfile manually
+          cat > Dockerfile << 'EOF'
+FROM python:3.11-slim
+WORKDIR /app
+RUN pip install --no-cache-dir mlflow scikit-learn pandas numpy joblib
+COPY mlruns/ /app/mlruns/
+COPY diabetes_preprocessing.csv /app/
+EXPOSE 5002
+ENV MLFLOW_TRACKING_URI=file:///app/mlruns
+CMD ["mlflow", "models", "serve", "-m", "mlruns/0", "--port", "5002", "--host", "0.0.0.0", "--no-conda"]
+EOF
+          docker build -t eidelwiseprily/diabetes-classifier:latest .
+        fi
       continue-on-error: true
         
     - name: 📤 Push Docker Image to Docker Hub
