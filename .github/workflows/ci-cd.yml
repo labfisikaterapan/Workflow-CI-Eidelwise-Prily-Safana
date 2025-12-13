@@ -33,10 +33,9 @@ jobs:
         
     - name: Run MLflow Project (Training)
       id: train
-      working-directory: ./MLProject
       run: |
-        echo "=== Running MLflow Project ==="
-        mlflow run . \
+        echo "=== Running mlflow run MLProject ==="
+        mlflow run MLProject \
           --env-manager=local \
           --experiment-name "DiabetesClassifier_Eidelwise_CI" \
           -P n_estimators=100 \
