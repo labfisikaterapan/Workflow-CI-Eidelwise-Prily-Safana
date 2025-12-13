@@ -79,7 +79,7 @@ jobs:
         echo "Model URI: $MODEL_URI"
         if [ -d "$MODEL_URI" ]; then
           echo "Model found - using mlflow models build-docker"
-          mlflow models build-docker -m "$MODEL_URI" -n "eidelwiseprily/diabetes-classifier" --enable-mlserver || echo "mlflow build-docker failed, using fallback"
+          mlflow models build-docker -m "$MODEL_URI" -n "eizfisika/diabetes-classifier" --enable-mlserver || echo "mlflow build-docker failed, using fallback"
         fi
         if [ ! -d "$MODEL_URI" ] || [ $? -ne 0 ]; then
           echo "Using fallback Dockerfile"
@@ -90,14 +90,14 @@ jobs:
           echo 'COPY diabetes_preprocessing.csv /app/' >> Dockerfile
           echo 'EXPOSE 5002' >> Dockerfile
           echo 'CMD ["python", "-c", "print(\"Model ready\")"]' >> Dockerfile
-          docker build -t eidelwiseprily/diabetes-classifier:latest .
+          docker build -t eizfisika/diabetes-classifier:latest .
         fi
       continue-on-error: true
         
     - name: Push Docker Image to Docker Hub
       if: github.event_name == 'push'
       run: |
-        docker push eidelwiseprily/diabetes-classifier:latest || echo "Push failed or skipped"
+        docker push eizfisika/diabetes-classifier:latest || echo "Push failed or skipped"
       continue-on-error: true
         
     - name: Workflow Summary
@@ -105,4 +105,4 @@ jobs:
         echo "Workflow completed!"
         echo "Author: Eidelwise Prily Safana"
         echo "Kriteria: 3 - ADVANCED (4 pts)"
-        echo "Docker Image: eidelwiseprily/diabetes-classifier:latest"
+        echo "Docker Image: eizfisika/diabetes-classifier:latest"
